@@ -1,23 +1,31 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+// CameraScreen.tsx
+import React, { useRef, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Text, Image } from 'react-native';
 import {
   Camera,
   useCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import Icon from 'react-native-vector-icons/Feather'; // 👈 Make sure this is installed
+import Icon from 'react-native-vector-icons/Feather';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/AppNavigator';
+
+type CameraScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'Camera'
+>;
 
 export default function CameraScreen() {
-  const cameraRef = useRef<Camera>(null);
   const device = useCameraDevice('back');
   const { hasPermission, requestPermission } = useCameraPermission();
+  const cameraRef = useRef<Camera>(null);
+  const navigation = useNavigation<CameraScreenNavigationProp>();
 
   useEffect(() => {
-    (async () => {
-      if (!hasPermission) {
-        await requestPermission();
-      }
-    })();
+    if (!hasPermission) {
+      requestPermission();
+    }
   }, [hasPermission]);
 
   if (device == null) return <Text>Camera Not Found..</Text>;
@@ -28,10 +36,12 @@ export default function CameraScreen() {
       try {
         const photo = await cameraRef.current.takePhoto({
           flash: 'off',
+          enableShutterSound: true,
         });
-        console.log('📸 Photo captured: ', photo);
+        console.log('Captured photo:', photo);
+        navigation.navigate('Home', { photo }); // 👈 Send photo back
       } catch (e) {
-        console.error('Capture failed:', e);
+        console.error('Error capturing photo:', e);
       }
     }
   };

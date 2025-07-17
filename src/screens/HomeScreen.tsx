@@ -1,20 +1,30 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+} from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { useNavigation } from '@react-navigation/native';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'Home'
 >;
 
+type HomeScreenRouteProp = RouteProp<RootStackParamList, 'Home'>;
+
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  const route = useRoute<HomeScreenRouteProp>();
+  const photo = route.params?.photo;
 
   const handleScanLeaf = () => {
-    navigation.navigate("Camera");
+    navigation.navigate('Camera');
   };
 
   return (
@@ -25,6 +35,14 @@ export default function HomeScreen() {
         <Feather name="camera" size={20} color="#fff" style={styles.icon} />
         <Text style={styles.buttonText}>Scan Leaf</Text>
       </TouchableOpacity>
+
+      {photo?.path && (
+        <Image
+          source={{ uri: 'file://' + photo.path }}
+          style={styles.preview}
+          resizeMode="cover"
+        />
+      )}
     </View>
   );
 }
@@ -50,6 +68,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 8,
     alignItems: 'center',
+    marginBottom: 20,
   },
   icon: {
     marginRight: 10,
@@ -57,5 +76,11 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  preview: {
+    width: 250,
+    height: 250,
+    borderRadius: 10,
+    marginTop: 20,
   },
 });

@@ -4,9 +4,10 @@ import { NavigationContainer } from '@react-navigation/native';
 
 import CameraScreen from '../screens/CameraScreen';
 import HomeScreen from '../screens/HomeScreen';
+import { PhotoFile } from 'react-native-vision-camera';
 
 export type RootStackParamList = {
-  Home: undefined;
+  Home: { photo?: PhotoFile } | undefined;
   Camera: undefined;
 };
 
