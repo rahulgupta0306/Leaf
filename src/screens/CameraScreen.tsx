@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, Text } from 'react-native';
 import {
   Camera,
   useCameraDevice,
@@ -8,14 +8,19 @@ import {
 
 export default function CameraScreen() {
   const device = useCameraDevice('back');
-  const { hasPermission } = useCameraPermission();
+  const { hasPermission, requestPermission } = useCameraPermission();
 
-  if (!hasPermission) return null;
-  if (device == null) return null;
+  if (device == null) return <Text>Camera Not Found..</Text>;
+
+  useEffect(() => {
+    (async () => {
+      if (!hasPermission) {
+        await requestPermission();
+      }
+    })();
+  }, []);
 
   return (
-    <View style={StyleSheet.absoluteFill}>
-      <Camera style={StyleSheet.absoluteFill} device={device} isActive={true} />
-    </View>
+    <Camera style={StyleSheet.absoluteFill} device={device} isActive={true} />
   );
 }
