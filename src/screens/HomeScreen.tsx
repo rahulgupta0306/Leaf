@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -24,6 +18,7 @@ export default function HomeScreen() {
   const photo = route.params?.photo;
 
   const handleScanLeaf = () => {
+    // Opens camera
     navigation.navigate('Camera');
   };
 

@@ -4,11 +4,13 @@ import { NavigationContainer } from '@react-navigation/native';
 
 import CameraScreen from '../screens/CameraScreen';
 import HomeScreen from '../screens/HomeScreen';
+import OutputScreen from '../screens/OutputScreen';
 import { PhotoFile } from 'react-native-vision-camera';
 
 export type RootStackParamList = {
   Home: { photo?: PhotoFile } | undefined;
   Camera: undefined;
+  Output: { photo?: PhotoFile } | undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -19,6 +21,7 @@ export default function AppNavigator() {
       <Stack.Navigator initialRouteName="Home">
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Camera" component={CameraScreen} />
+        <Stack.Screen name="Output" component={OutputScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

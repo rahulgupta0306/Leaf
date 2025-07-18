@@ -39,7 +39,7 @@ export default function CameraScreen() {
           enableShutterSound: true,
         });
         console.log('Captured photo:', photo);
-        navigation.navigate('Home', { photo }); // 👈 Send photo back
+        navigation.navigate('Output', { photo });
       } catch (e) {
         console.error('Error capturing photo:', e);
       }
