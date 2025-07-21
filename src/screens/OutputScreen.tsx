@@ -1,9 +1,17 @@
-import React from 'react';
-import { Image, StyleSheet, View, TouchableOpacity, Text } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  Image,
+  StyleSheet,
+  View,
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import axios from 'axios';
 
 type OutputScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -16,8 +24,56 @@ export default function OutputScreen() {
   const navigation = useNavigation<OutputScreenNavigationProp>();
   const photo = route.params?.photo;
 
+  const [prediction, setPrediction] = useState<string | null>(null);
+  const [confidence, setConfidence] = useState<number | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const uploadImage = async () => {
+      try {
+        if (!photo || !photo.path) {
+          setPrediction('No photo provided');
+          setLoading(false);
+          return;
+        }
+        const uri = photo.path.startsWith('file://')
+          ? photo.path
+          : `file://${photo.path}`;
+        const formData = new FormData();
+
+        formData.append('image', {
+          uri,
+          type: 'image/jpeg',
+          name: 'leaf.jpg',
+        });
+
+        const response = await axios.post(
+          'http://10.229.215.1:8082/predict',
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          },
+        );
+
+        setPrediction(response.data.prediction);
+        setConfidence(response.data.confidence);
+      } catch (error) {
+        console.error('Upload failed:', error);
+        setPrediction('Error uploading image');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (photo?.path) {
+      uploadImage();
+    }
+  }, [photo]);
+
   const handleRetake = () => {
-    navigation.navigate('Camera'); // Navigate back to camera screen
+    navigation.navigate('Camera');
   };
 
   return (
@@ -32,7 +88,6 @@ export default function OutputScreen() {
             resizeMode="cover"
           />
 
-          {/* Image details */}
           <View style={styles.detailsContainer}>
             <Text style={styles.detailText}>
               📂 File: {photo.path.split('/').pop() || 'N/A'}
@@ -43,14 +98,28 @@ export default function OutputScreen() {
             <Text style={styles.detailText}>📍 Path: {photo.path}</Text>
           </View>
 
-          {/* Retake button */}
+          {loading ? (
+            <ActivityIndicator size="large" style={{ marginTop: 20 }} />
+          ) : (
+            <>
+              <Text style={styles.predictionText}>
+                🧬 Prediction: {prediction}
+              </Text>
+              <Text style={styles.confidenceText}>
+                🎯 Confidence:{' '}
+                {confidence !== null
+                  ? (confidence).toFixed(2) + '%'
+                  : 'N/A'}
+              </Text>
+            </>
+          )}
+
           <TouchableOpacity style={styles.retakeButton} onPress={handleRetake}>
             <Text style={styles.retakeButtonText}>Retake Photo</Text>
           </TouchableOpacity>
         </>
       )}
 
-      {/* Home icon at bottom center */}
       <TouchableOpacity
         style={styles.bottomHomeIcon}
         onPress={() => navigation.navigate('Home')}
@@ -68,6 +137,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    paddingBottom: 80, // <-- Added padding to prevent overlap
   },
   preview: {
     width: 250,
@@ -83,8 +153,20 @@ const styles = StyleSheet.create({
     color: '#333',
     marginVertical: 2,
   },
+  predictionText: {
+    marginTop: 20,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2e7d32',
+  },
+  confidenceText: {
+    fontSize: 16,
+    marginTop: 4,
+    color: '#444',
+  },
   retakeButton: {
     marginTop: 20,
+    marginBottom: 40, // <-- Add space between button and home icon
     paddingVertical: 10,
     paddingHorizontal: 20,
     backgroundColor: '#008080',
@@ -97,7 +179,7 @@ const styles = StyleSheet.create({
   },
   bottomHomeIcon: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 20, // <-- Lowered from 30 to 20
     alignSelf: 'center',
     backgroundColor: '#fff',
     padding: 10,
