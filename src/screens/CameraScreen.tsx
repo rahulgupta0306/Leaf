@@ -1,6 +1,13 @@
 // CameraScreen.tsx
 import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Image } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  Image,
+  NativeModules,
+} from 'react-native';
 import {
   Camera,
   useCameraDevice,
@@ -40,9 +47,20 @@ export default function CameraScreen() {
         });
         console.log('Captured photo:', photo);
         navigation.navigate('Output', { photo });
+        // Optionally, run inference on the captured photo
+        await runInference(photo.path);
       } catch (e) {
         console.error('Error capturing photo:', e);
       }
+    }
+  };
+
+  const runInference = async (path: string) => {
+    try {
+      const result = await NativeModules.MyTFLiteModule.runModel(path);
+      console.log('Model output:', result);
+    } catch (err) {
+      console.error('Inference failed:', err);
     }
   };
 
