@@ -18,13 +18,10 @@
     "@types/react-native": "^0.72.8",
     "react": "19.1.0",
     "react-native": "0.80.1",
-    "react-native-fast-tflite": "^1.6.1",
     "react-native-gesture-handler": "^2.27.1",
-    "react-native-image-picker": "^8.2.1",
     "react-native-reanimated": "^3.18.0",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.13.0",
-    "react-native-tflite": "^0.0.2",
     "react-native-vector-icons": "^10.2.0",
     "react-native-vision-camera": "^4.7.0"
   },

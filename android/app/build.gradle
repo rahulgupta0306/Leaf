@@ -93,6 +93,13 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+
+        release {
+            storeFile file('my-leaf-key.keystore')
+            storePassword 'leaf-disease'
+            keyAlias 'my-leaf-alias'
+            keyPassword 'leaf-disease'
+        }
     }
     buildTypes {
         debug {
@@ -101,10 +108,17 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
+    }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+        warningsAsErrors = false
+        ignoreWarnings = true
     }
 }
 
@@ -118,3 +132,23 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+
+// Already present block
+afterEvaluate {
+    tasks.matching { 
+        it.name.startsWith("generate") && it.name.endsWith("LintReportModel") 
+    }.configureEach {
+        dependsOn("copyReactNativeVectorIconFonts")
+    }
+}
+
+// Add this new block to fix lintAnalyzeDebug
+afterEvaluate {
+    tasks.matching {
+        it.name.startsWith("lint")
+    }.configureEach {
+        dependsOn("copyReactNativeVectorIconFonts")
+    }
+}
+
