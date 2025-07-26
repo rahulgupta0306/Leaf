@@ -1,13 +1,6 @@
 // CameraScreen.tsx
 import React, { useRef, useEffect, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Text,
-  NativeModules,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
 import {
   Camera,
   PhotoFile,
@@ -43,20 +36,10 @@ export default function CameraScreen() {
   if (device == null) return <Text>Camera Not Found..</Text>;
   if (!hasPermission) return <Text>No Permission to Open camera</Text>;
 
-  const runInference = async (path: string) => {
-    try {
-      const result = await NativeModules.MyTFLiteModule.runModel(path);
-      console.log('Model output:', result);
-    } catch (err) {
-      console.error('Inference failed:', err);
-    }
-  };
-
   const processImage = async (imagePath: string) => {
     try {
       setIsProcessing(true);
       navigation.navigate('Preview', { photo: { path: imagePath } });
-      await runInference(imagePath);
     } catch (err) {
       Alert.alert('Error', 'Failed to process image.');
       console.error(err);

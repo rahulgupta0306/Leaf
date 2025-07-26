@@ -19,7 +19,7 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) :
     }
 
     init {
-        val modelFile = loadModelFile("apple_disease_model.tflite")
+        val modelFile = loadModelFile("apple_disease_model_MobileNetV2_fixed.tflite")
         tflite = Interpreter(modelFile)
     }
 

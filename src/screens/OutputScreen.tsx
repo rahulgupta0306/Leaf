@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   Text,
   ActivityIndicator,
-  Alert,
+  NativeModules,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -38,6 +38,7 @@ export default function OutputScreen() {
           return;
         }
 
+        /**
         const uri = photo.path.startsWith('file://')
           ? photo.path
           : `file://${photo.path}`;
@@ -49,7 +50,7 @@ export default function OutputScreen() {
           name: 'leaf.jpg',
         });
 
-        const response = await axios.post(
+         const response = await axios.post(
           'http://10.229.215.1:8082/predict',
           formData,
           {
@@ -58,9 +59,11 @@ export default function OutputScreen() {
             },
           },
         );
-
         setPrediction(response.data.prediction);
         setConfidence(response.data.confidence);
+         */
+
+        await runInference(photo.path);
       } catch (error) {
         console.error('Upload failed:', error);
         setPrediction('Error uploading image');
@@ -73,6 +76,28 @@ export default function OutputScreen() {
       uploadImage();
     }
   }, [photo]);
+
+  const runInference = async (path: string) => {
+    try {
+      const result = await NativeModules.MyTFLiteModule.runModel(path);
+      console.log('Model output:', result);
+      const output = result as string;
+      const match = output.match(/^(.+)\s+\((\d+)%\)$/);
+      if (match) {
+        const [, predictedClass, confidenceStr] = match;
+        setPrediction(predictedClass.trim());
+        setConfidence(Number(confidenceStr));
+      } else {
+        console.warn('Could not parse model output:', output);
+        setPrediction(output);
+        setConfidence(null);
+      }
+    } catch (err) {
+      console.error('Inference failed:', err);
+      setPrediction('Inference failed');
+      setConfidence(null);
+    }
+  };
 
   const handleRetake = () => {
     navigation.navigate('Camera');
