@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Text,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -36,11 +37,12 @@ export default function OutputScreen() {
           setLoading(false);
           return;
         }
+
         const uri = photo.path.startsWith('file://')
           ? photo.path
           : `file://${photo.path}`;
-        const formData = new FormData();
 
+        const formData = new FormData();
         formData.append('image', {
           uri,
           type: 'image/jpeg',
@@ -80,10 +82,10 @@ export default function OutputScreen() {
     <View style={styles.container}>
       <Text style={styles.headerText}>Plant Disease Detection Result</Text>
 
-      {photo?.path && (
+      {photo?.path ? (
         <>
           <Image
-            source={{ uri: 'file://' + photo.path }}
+            source={{ uri: `file://${photo.path}` }}
             style={styles.preview}
             resizeMode="cover"
           />
@@ -91,9 +93,6 @@ export default function OutputScreen() {
           <View style={styles.detailsContainer}>
             <Text style={styles.detailText}>
               📂 File: {photo.path.split('/').pop() || 'N/A'}
-            </Text>
-            <Text style={styles.detailText}>
-              📏 Size: {photo.width || '-'} × {photo.height || '-'}
             </Text>
             <Text style={styles.detailText}>📍 Path: {photo.path}</Text>
           </View>
@@ -107,9 +106,7 @@ export default function OutputScreen() {
               </Text>
               <Text style={styles.confidenceText}>
                 🎯 Confidence:{' '}
-                {confidence !== null
-                  ? (confidence).toFixed(2) + '%'
-                  : 'N/A'}
+                {confidence !== null ? confidence.toFixed(2) + '%' : 'N/A'}
               </Text>
             </>
           )}
@@ -118,6 +115,8 @@ export default function OutputScreen() {
             <Text style={styles.retakeButtonText}>Retake Photo</Text>
           </TouchableOpacity>
         </>
+      ) : (
+        <Text style={{ marginTop: 20, color: 'red' }}>No image to display</Text>
       )}
 
       <TouchableOpacity
@@ -137,7 +136,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    paddingBottom: 80, // <-- Added padding to prevent overlap
+    paddingBottom: 80,
   },
   preview: {
     width: 250,
@@ -166,7 +165,7 @@ const styles = StyleSheet.create({
   },
   retakeButton: {
     marginTop: 20,
-    marginBottom: 40, // <-- Add space between button and home icon
+    marginBottom: 40,
     paddingVertical: 10,
     paddingHorizontal: 20,
     backgroundColor: '#008080',
@@ -179,7 +178,7 @@ const styles = StyleSheet.create({
   },
   bottomHomeIcon: {
     position: 'absolute',
-    bottom: 20, // <-- Lowered from 30 to 20
+    bottom: 20,
     alignSelf: 'center',
     backgroundColor: '#fff',
     padding: 10,
