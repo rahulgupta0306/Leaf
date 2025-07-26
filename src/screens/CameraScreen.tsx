@@ -55,7 +55,7 @@ export default function CameraScreen() {
   const processImage = async (imagePath: string) => {
     try {
       setIsProcessing(true);
-      navigation.navigate('Output', { photo: { path: imagePath } });
+      navigation.navigate('Preview', { photo: { path: imagePath } });
       await runInference(imagePath);
     } catch (err) {
       Alert.alert('Error', 'Failed to process image.');
