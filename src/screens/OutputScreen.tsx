@@ -12,7 +12,8 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import axios from 'axios';
+
+const { MyTFLiteModule } = NativeModules;
 
 type OutputScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -24,83 +25,78 @@ export default function OutputScreen() {
   const route = useRoute<OutputScreenRouteProp>();
   const navigation = useNavigation<OutputScreenNavigationProp>();
   const photo = route.params?.photo;
+  const selectedCrop = route.params?.selectedCrop;
 
   const [prediction, setPrediction] = useState<string | null>(null);
   const [confidence, setConfidence] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const uploadImage = async () => {
+    const runDiseaseInference = async () => {
       try {
-        if (!photo || !photo.path) {
-          setPrediction('No photo provided');
+        if (!photo?.path || !selectedCrop) {
+          setPrediction('No photo or crop provided');
           setLoading(false);
           return;
         }
 
-        /**
-        const uri = photo.path.startsWith('file://')
-          ? photo.path
-          : `file://${photo.path}`;
+        let diseaseResult;
 
-        const formData = new FormData();
-        formData.append('image', {
-          uri,
-          type: 'image/jpeg',
-          name: 'leaf.jpg',
-        });
+        // ✅ Switch-case for supported crops
+        switch (selectedCrop.toLowerCase()) {
+          case 'apple':
+            diseaseResult = await MyTFLiteModule.runAppleDiseaseModel(
+              photo.path,
+            );
+            break;
+          case 'corn':
+            diseaseResult = await MyTFLiteModule.runCornDiseaseModel(
+              photo.path,
+            );
+            break;
+          case 'grape':
+            diseaseResult = await MyTFLiteModule.runGrapeDiseaseModel(
+              photo.path,
+            );
+            break;
+          case 'potato':
+            diseaseResult = await MyTFLiteModule.runPotatoDiseaseModel(
+              photo.path,
+            );
+            break;
+          case 'tomato':
+            diseaseResult = await MyTFLiteModule.runTomatoDiseaseModel(
+              photo.path,
+            );
+            break;
+          default:
+            setPrediction(`❌ No disease model available for ${selectedCrop}`);
+            setConfidence(null);
+            setLoading(false);
+            return;
+        }
 
-         const response = await axios.post(
-          'http://10.229.215.1:8082/predict',
-          formData,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          },
-        );
-        setPrediction(response.data.prediction);
-        setConfidence(response.data.confidence);
-         */
-
-        await runInference(photo.path);
-      } catch (error) {
-        console.error('Upload failed:', error);
-        setPrediction('Error uploading image');
+        // Process result
+        if (diseaseResult) {
+          const predictedDisease = diseaseResult.label;
+          const diseaseConfidence = diseaseResult.confidence * 100;
+          setPrediction(predictedDisease);
+          setConfidence(diseaseConfidence);
+        }
+      } catch (err) {
+        console.error('Inference failed:', err);
+        setPrediction('Inference failed');
+        setConfidence(null);
       } finally {
         setLoading(false);
       }
     };
 
-    if (photo?.path) {
-      uploadImage();
-    }
-  }, [photo]);
-
-  const runInference = async (path: string) => {
-    try {
-      const result = await NativeModules.MyTFLiteModule.runModel(path);
-      console.log('Model output:', result);
-      const output = result as string;
-      const match = output.match(/^(.+)\s+\((\d+)%\)$/);
-      if (match) {
-        const [, predictedClass, confidenceStr] = match;
-        setPrediction(predictedClass.trim());
-        setConfidence(Number(confidenceStr));
-      } else {
-        console.warn('Could not parse model output:', output);
-        setPrediction(output);
-        setConfidence(null);
-      }
-    } catch (err) {
-      console.error('Inference failed:', err);
-      setPrediction('Inference failed');
-      setConfidence(null);
-    }
-  };
+    runDiseaseInference();
+  }, [photo, selectedCrop]);
 
   const handleRetake = () => {
-    navigation.navigate('Camera');
+    navigation.navigate('Camera', { selectedCrop });
   };
 
   return (
@@ -120,6 +116,7 @@ export default function OutputScreen() {
               📂 File: {photo.path.split('/').pop() || 'N/A'}
             </Text>
             <Text style={styles.detailText}>📍 Path: {photo.path}</Text>
+            <Text style={styles.detailText}>🌱 Crop: {selectedCrop}</Text>
           </View>
 
           {loading ? (
@@ -127,7 +124,7 @@ export default function OutputScreen() {
           ) : (
             <>
               <Text style={styles.predictionText}>
-                🧬 Prediction: {prediction}
+                🧬 Disease: {prediction}
               </Text>
               <Text style={styles.confidenceText}>
                 🎯 Confidence:{' '}

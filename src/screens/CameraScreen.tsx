@@ -8,7 +8,7 @@ import {
   useCameraPermission,
 } from 'react-native-vision-camera';
 import Icon from 'react-native-vector-icons/Feather';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { launchImageLibrary, Asset } from 'react-native-image-picker';
@@ -18,11 +18,15 @@ type CameraScreenNavigationProp = NativeStackNavigationProp<
   'Camera'
 >;
 
+type CameraScreenRouteProp = RouteProp<RootStackParamList, 'Camera'>;
+
 export default function CameraScreen() {
   const device = useCameraDevice('back');
   const { hasPermission, requestPermission } = useCameraPermission();
   const cameraRef = useRef<Camera>(null);
+  const route = useRoute<CameraScreenRouteProp>();
   const navigation = useNavigation<CameraScreenNavigationProp>();
+  const selectedCrop = route.params?.selectedCrop;
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -39,7 +43,10 @@ export default function CameraScreen() {
   const processImage = async (imagePath: string) => {
     try {
       setIsProcessing(true);
-      navigation.navigate('Preview', { photo: { path: imagePath } });
+      navigation.navigate('Preview', {
+        photo: { path: imagePath },
+        selectedCrop: selectedCrop,
+      });
     } catch (err) {
       Alert.alert('Error', 'Failed to process image.');
       console.error(err);
@@ -94,6 +101,15 @@ export default function CameraScreen() {
         photo={true}
       />
 
+      {/* NEW HEADER FOR SELECTED CROP */}
+      {selectedCrop && (
+        <View style={styles.header}>
+          <Text style={styles.headerText}>
+            Please scan a {selectedCrop} Leaf
+          </Text>
+        </View>
+      )}
+
       <TouchableOpacity style={styles.captureButton} onPress={handleCapture}>
         <Icon name="camera" size={30} color="#000" />
       </TouchableOpacity>
@@ -111,6 +127,21 @@ export default function CameraScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  // NEW STYLES FOR THE HEADER
+  header: {
+    position: 'absolute',
+    // top: 50,
+    bottom: 120,
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Semi-transparent black
+  },
+  headerText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   captureButton: {
     position: 'absolute',

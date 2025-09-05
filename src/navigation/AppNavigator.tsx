@@ -10,9 +10,9 @@ import { PhotoFile } from 'react-native-vision-camera';
 
 export type RootStackParamList = {
   Home: undefined;
-  Camera: undefined;
-  Output: { photo: { path: string } } | undefined;
-  Preview: { photo: { path: string } } | undefined;
+  Camera: { selectedCrop: string };
+  Output: { photo: { path: string }; selectedCrop: string };
+  Preview: { photo: { path: string }; selectedCrop: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
