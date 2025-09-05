@@ -86,6 +86,7 @@ android {
         versionCode 1
         versionName "1.0"
     }
+
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -101,6 +102,7 @@ android {
             keyPassword 'leaf-disease'
         }
     }
+
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
@@ -120,12 +122,17 @@ android {
         warningsAsErrors = false
         ignoreWarnings = true
     }
+
+    aaptOptions {
+        noCompress "tflite"
+    }
 }
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation 'org.tensorflow:tensorflow-lite:2.14.0'
+    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.14.0'
     implementation 'org.tensorflow:tensorflow-lite-support:0.4.3'
 
     if (hermesEnabled.toBoolean()) {

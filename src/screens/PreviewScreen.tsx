@@ -37,6 +37,7 @@ export default function PreviewScreen() {
     }
     setIsLoading(true);
 
+    // todo
     try {
       // Step 1: Crop verification
       const cropResult = await MyTFLiteModule.runCropClassifier(photo.path);
@@ -51,6 +52,8 @@ export default function PreviewScreen() {
         );
         return;
       }
+
+      // const predictedCrop = selectedCrop;
 
       // ✅ If crop matches, go to Output screen
       navigation.navigate('Output', {

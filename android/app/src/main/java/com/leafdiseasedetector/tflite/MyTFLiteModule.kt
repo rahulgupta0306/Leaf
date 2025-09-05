@@ -56,24 +56,26 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
     init {
         try {
             // Load crop classifier
-            leafClassifierLabels = loadLabels("leaf_classifier_label.txt")
-            leafClassifierTflite = Interpreter(loadModelFile("leaf_classifier_quant.tflite"))
+            leafClassifierLabels = loadLabels("leaf_type_labels.txt")
+            leafClassifierTflite = Interpreter(loadModelFile("leaf_type_classifier_MobileNetV3Large.tflite"))
+            // best_apple_disease_model_MobileNetV2 leaf_classifier_quant apple_disease_model_fixed.tflite
+            // C:\Leaf\android\app\src\main\assets\apple_disease_model_MobileNetV3Large.tflite
 
             // Load crop-specific disease models
             appleDiseaseLabels = loadLabels("apple_disease_labels.txt")
-            appleDiseaseTflite = Interpreter(loadModelFile("best_apple_disease_model_MobileNetV2.tflite"))
+            appleDiseaseTflite = Interpreter(loadModelFile("apple_disease_model_MobileNetV3Large.tflite"))
 
             cornDiseaseLabels = loadLabels("corn_disease_labels.txt")
-            cornDiseaseTflite = Interpreter(loadModelFile("best_corn_disease_model_MobileNetV2.tflite"))
+            cornDiseaseTflite = Interpreter(loadModelFile("corn_disease_model_MobileNetV3Large.tflite"))
 
             grapeDiseaseLabels = loadLabels("grape_disease_labels.txt")
-            grapeDiseaseTflite = Interpreter(loadModelFile("best_grape_disease_model_MobileNetV2.tflite"))
+            grapeDiseaseTflite = Interpreter(loadModelFile("grape_disease_model_MobileNetV3Large.tflite"))
 
             potatoDiseaseLabels = loadLabels("potato_disease_labels.txt")
-            potatoDiseaseTflite = Interpreter(loadModelFile("best_potato_disease_model_MobileNetV2.tflite"))
+            potatoDiseaseTflite = Interpreter(loadModelFile("potato_disease_model_MobileNetV3Large.tflite"))
 
             tomatoDiseaseLabels = loadLabels("tomato_disease_labels.txt")
-            tomatoDiseaseTflite = Interpreter(loadModelFile("best_tomato_disease_model_MobileNetV2.tflite"))
+            tomatoDiseaseTflite = Interpreter(loadModelFile("tomato_disease_model_MobileNetV3Large.tflite"))
 
             Log.i("MyTFLiteModule", "✅ All models and labels loaded successfully.")
         } catch (e: Exception) {
