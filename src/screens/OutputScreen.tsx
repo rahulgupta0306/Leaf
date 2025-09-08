@@ -159,6 +159,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingBottom: 80,
+    paddingTop: 55
   },
   preview: {
     width: 250,
@@ -212,9 +213,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   headerText: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 15,
     color: '#2e7d32',
     textAlign: 'center',
   },

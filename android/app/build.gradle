@@ -85,6 +85,11 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+
+        // 👇 Add this to strip debug symbols from native libs (reduces APK size)
+        ndk {
+            debugSymbolLevel 'none'
+        }
     }
 
     signingConfigs {
@@ -112,6 +117,7 @@ android {
             // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
+            // shrinkResources true
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
