@@ -130,7 +130,7 @@ android {
     }
 
     aaptOptions {
-        noCompress "tflite"
+        noCompress "tflite", "bin"
     }
 }
 

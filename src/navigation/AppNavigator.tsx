@@ -6,7 +6,6 @@ import CameraScreen from '../screens/CameraScreen';
 import HomeScreen from '../screens/HomeScreen';
 import OutputScreen from '../screens/OutputScreen';
 import PreviewScreen from '../screens/PreviewScreen';
-import { PhotoFile } from 'react-native-vision-camera';
 
 export type RootStackParamList = {
   Home: undefined;
