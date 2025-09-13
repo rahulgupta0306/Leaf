@@ -30,6 +30,8 @@ export default function OutputScreen() {
   const [prediction, setPrediction] = useState<string | null>(null);
   const [confidence, setConfidence] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [gradcamBase64, setGradcamBase64] = useState<string | null>(null);
+  const [showGradcam, setShowGradcam] = useState(false);
 
   useEffect(() => {
     const runDiseaseInference = async () => {
@@ -42,22 +44,17 @@ export default function OutputScreen() {
 
         let diseaseResult;
 
-        // ✅ Switch-case for supported crops
         switch (selectedCrop.toLowerCase()) {
           case 'apple':
-            diseaseResult = await MyTFLiteModule.runAppleDiseaseModel(
-              photo.path,
-            );
+            // uses Grad-CAM dual-output model so we also receive heatmap_base64
+            diseaseResult =
+              await MyTFLiteModule.runAppleDiseaseModelWithGradCAM(photo.path);
             break;
           case 'corn':
-            diseaseResult = await MyTFLiteModule.runCornDiseaseModel(
-              photo.path,
-            );
+            diseaseResult = await MyTFLiteModule.runCornDiseaseModel(photo.path);
             break;
           case 'grape':
-            diseaseResult = await MyTFLiteModule.runGrapeDiseaseModel(
-              photo.path,
-            );
+            diseaseResult = await MyTFLiteModule.runGrapeDiseaseModel(photo.path);
             break;
           case 'potato':
             diseaseResult = await MyTFLiteModule.runPotatoDiseaseModel(
@@ -76,12 +73,13 @@ export default function OutputScreen() {
             return;
         }
 
-        // Process result
         if (diseaseResult) {
-          const predictedDisease = diseaseResult.label;
-          const diseaseConfidence = diseaseResult.confidence * 100;
-          setPrediction(predictedDisease);
-          setConfidence(diseaseConfidence);
+          console.log('📊 Full inference result:', diseaseResult);
+          setPrediction(diseaseResult.label);
+          setConfidence(diseaseResult.confidence * 100);
+          if (diseaseResult.heatmap_base64) {
+            setGradcamBase64(diseaseResult.heatmap_base64);
+          }
         }
       } catch (err) {
         console.error('Inference failed:', err);
@@ -99,6 +97,10 @@ export default function OutputScreen() {
     navigation.navigate('Camera', { selectedCrop });
   };
 
+  const toggleGradcam = () => {
+    setShowGradcam(!showGradcam);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.headerText}>Plant Disease Detection Result</Text>
@@ -106,34 +108,45 @@ export default function OutputScreen() {
       {photo?.path ? (
         <>
           <Image
-            source={{ uri: `file://${photo.path}` }}
+            source={{
+              uri: showGradcam && gradcamBase64
+                ? `data:image/png;base64,${gradcamBase64}`
+                : `file://${photo.path}`,
+            }}
             style={styles.preview}
             resizeMode="cover"
           />
-
-          <View style={styles.detailsContainer}>
-            <Text style={styles.detailText}>
-              📂 File: {photo.path.split('/').pop() || 'N/A'}
-            </Text>
-            <Text style={styles.detailText}>📍 Path: {photo.path}</Text>
-            <Text style={styles.detailText}>🌱 Crop: {selectedCrop}</Text>
-          </View>
 
           {loading ? (
             <ActivityIndicator size="large" style={{ marginTop: 20 }} />
           ) : (
             <>
-              <Text style={styles.predictionText}>
-                🧬 Disease: {prediction}
-              </Text>
-              <Text style={styles.confidenceText}>
-                🎯 Confidence:{' '}
-                {confidence !== null ? confidence.toFixed(2) + '%' : 'N/A'}
-              </Text>
+              <View style={styles.resultsContainer}>
+                <Text style={styles.resultText}>🌱 Crop: {selectedCrop}</Text>
+                <Text style={styles.resultText}>🧬 Disease: {prediction}</Text>
+                <Text style={styles.resultText}>
+                  🎯 Confidence:{' '}
+                  {confidence !== null ? confidence.toFixed(2) + '%' : 'N/A'}
+                </Text>
+              </View>
+
+              {gradcamBase64 ? (
+                <TouchableOpacity
+                  style={styles.toggleButton}
+                  onPress={toggleGradcam}
+                >
+                  <Text style={styles.toggleButtonText}>
+                    {showGradcam ? 'Show Original' : 'Show Grad-CAM'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </>
           )}
 
-          <TouchableOpacity style={styles.retakeButton} onPress={handleRetake}>
+          <TouchableOpacity
+            style={[styles.retakeButton, { marginBottom: 80 }]}
+            onPress={handleRetake}
+          >
             <Text style={styles.retakeButtonText}>Retake Photo</Text>
           </TouchableOpacity>
         </>
@@ -159,36 +172,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingBottom: 80,
-    paddingTop: 55
+    paddingTop: 55,
   },
   preview: {
     width: 250,
     height: 250,
     borderRadius: 10,
   },
-  detailsContainer: {
+  headerText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#2e7d32',
+    textAlign: 'center',
+  },
+  resultsContainer: {
     marginTop: 20,
     alignItems: 'center',
   },
-  detailText: {
-    fontSize: 14,
-    color: '#333',
-    marginVertical: 2,
-  },
-  predictionText: {
-    marginTop: 20,
+  resultText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#2e7d32',
+    marginVertical: 4,
   },
-  confidenceText: {
+  toggleButton: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#008080',
+    borderRadius: 25,
+  },
+  toggleButtonText: {
+    color: '#fff',
     fontSize: 16,
-    marginTop: 4,
-    color: '#444',
+    fontWeight: '600',
   },
   retakeButton: {
     marginTop: 20,
-    marginBottom: 40,
     paddingVertical: 10,
     paddingHorizontal: 20,
     backgroundColor: '#008080',
@@ -211,12 +232,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#2e7d32',
-    textAlign: 'center',
   },
 });

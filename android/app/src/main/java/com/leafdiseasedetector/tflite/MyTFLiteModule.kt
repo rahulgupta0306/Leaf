@@ -13,6 +13,10 @@ import java.io.InputStreamReader
 import java.io.IOException
 import android.util.Log
 import java.nio.MappedByteBuffer
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.util.Base64
+import java.io.ByteArrayOutputStream
 
 /**
  * React Native bridge module for running TensorFlow Lite models.
@@ -49,17 +53,11 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
 
     override fun getName(): String = "MyTFLiteModule"
 
-    /**
-     * Initialize all interpreters and load labels from assets.
-     * This runs when the module is first loaded by React Native.
-     */
     init {
         try {
             // Load crop classifier
             leafClassifierLabels = loadLabels("leaf_type_labels.txt")
             leafClassifierTflite = Interpreter(loadModelFile("leaf_type_classifier_MobileNetV3Large.tflite"))
-            // best_apple_disease_model_MobileNetV2 leaf_classifier_quant apple_disease_model_fixed.tflite
-            // C:\Leaf\android\app\src\main\assets\apple_disease_model_MobileNetV3Large.tflite
 
             // Load crop-specific disease models
             appleDiseaseLabels = loadLabels("apple_disease_labels.txt")
@@ -83,12 +81,6 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    /**
-     * Load a TensorFlow Lite model file from the app's assets folder.
-     *
-     * @param filename Name of the `.tflite` file in the assets folder.
-     * @return A memory-mapped buffer containing the model.
-     */
     private fun loadModelFile(filename: String): MappedByteBuffer {
         val fileDescriptor = reactApplicationContext.assets.openFd(filename)
         val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
@@ -96,12 +88,6 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, fileDescriptor.startOffset, fileDescriptor.declaredLength)
     }
 
-    /**
-     * Load labels from a text file in the assets folder.
-     *
-     * @param labelsPath Path of the labels file (e.g. `apple_disease_labels.txt`).
-     * @return A list of label strings.
-     */
     @Throws(IOException::class)
     private fun loadLabels(labelsPath: String): List<String> {
         val labels = mutableListOf<String>()
@@ -114,17 +100,9 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         return labels
     }
 
-    /**
-     * Preprocess an image for TensorFlow Lite input.
-     * - Loads a bitmap from file.
-     * - Resizes to [inputSize] x [inputSize].
-     * - Normalizes pixels to [0, 1].
-     *
-     * @param imagePath Path to the image file.
-     * @return A ByteBuffer containing the image data.
-     */
     private fun preprocessImage(imagePath: String): ByteBuffer {
-        val bitmap = BitmapFactory.decodeFile(imagePath)?: throw IllegalArgumentException("Failed to decode image: $imagePath")
+        val bitmap =
+            BitmapFactory.decodeFile(imagePath) ?: throw IllegalArgumentException("Failed to decode image: $imagePath")
         val resized = Bitmap.createScaledBitmap(bitmap, inputSize, inputSize, true)
 
         val inputBuffer = ByteBuffer.allocateDirect(1 * inputSize * inputSize * pixelSize * numBytesPerChannel)
@@ -141,14 +119,6 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         return inputBuffer
     }
 
-    /**
-     * Generic model runner for classification.
-     *
-     * @param interpreter The TensorFlow Lite interpreter.
-     * @param labels The list of class labels.
-     * @param imagePath Path to the image file.
-     * @return A WritableMap with "label" and "confidence".
-     */
     private fun runModel(interpreter: Interpreter?, labels: List<String>, imagePath: String): WritableMap {
         val inputBuffer = preprocessImage(imagePath)
         val outputShape = interpreter!!.getOutputTensor(0).shape()
@@ -166,22 +136,12 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    // ================== React Methods ==================
-
-    /**
-     * Run the crop classifier model to identify the crop type.
-     *
-     * @param imagePath Path to the image file.
-     * @param promise A JS promise resolving with {label, confidence}.
-     */
+    // =============== React Methods ===============
     @ReactMethod
     fun runCropClassifier(imagePath: String, promise: Promise) {
         try {
             if (leafClassifierTflite == null) {
-                promise.reject(
-                    "MODEL_ERROR",
-                    "Leaf Classifier not loaded. Verify assets/leaf_classifier_quant.tflite and leaf_classifier_label.txt exist and are uncompressed."
-                )
+                promise.reject("MODEL_ERROR", "Leaf Classifier not loaded.")
                 return
             }
             promise.resolve(runModel(leafClassifierTflite, leafClassifierLabels, imagePath))
@@ -190,39 +150,21 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    /**
-     * Run the Apple Disease model to detect diseases in apple leaves.
-     */
-    @ReactMethod fun runAppleDiseaseModel(imagePath: String, promise: Promise) = runDisease(promise, appleDiseaseTflite, appleDiseaseLabels, imagePath)
+    @ReactMethod fun runAppleDiseaseModel(imagePath: String, promise: Promise) =
+        runDisease(promise, appleDiseaseTflite, appleDiseaseLabels, imagePath)
 
-    /**
-     * Run the Corn Disease model to detect diseases in corn leaves.
-     */
-    @ReactMethod fun runCornDiseaseModel(imagePath: String, promise: Promise) = runDisease(promise, cornDiseaseTflite, cornDiseaseLabels, imagePath)
+    @ReactMethod fun runCornDiseaseModel(imagePath: String, promise: Promise) =
+        runDisease(promise, cornDiseaseTflite, cornDiseaseLabels, imagePath)
 
-    /**
-     * Run the Grape Disease model to detect diseases in grape leaves.
-     */
-    @ReactMethod fun runGrapeDiseaseModel(imagePath: String, promise: Promise) = runDisease(promise, grapeDiseaseTflite, grapeDiseaseLabels, imagePath)
+    @ReactMethod fun runGrapeDiseaseModel(imagePath: String, promise: Promise) =
+        runDisease(promise, grapeDiseaseTflite, grapeDiseaseLabels, imagePath)
 
-    /**
-     * Run the Potato Disease model to detect diseases in potato leaves.
-     */
-    @ReactMethod fun runPotatoDiseaseModel(imagePath: String, promise: Promise) = runDisease(promise, potatoDiseaseTflite, potatoDiseaseLabels, imagePath)
+    @ReactMethod fun runPotatoDiseaseModel(imagePath: String, promise: Promise) =
+        runDisease(promise, potatoDiseaseTflite, potatoDiseaseLabels, imagePath)
 
-    /**
-     * Run the Tomato Disease model to detect diseases in tomato leaves.
-     */
-    @ReactMethod fun runTomatoDiseaseModel(imagePath: String, promise: Promise) = runDisease(promise, tomatoDiseaseTflite, tomatoDiseaseLabels, imagePath)
+    @ReactMethod fun runTomatoDiseaseModel(imagePath: String, promise: Promise) =
+        runDisease(promise, tomatoDiseaseTflite, tomatoDiseaseLabels, imagePath)
 
-    /**
-     * Shared helper to execute disease classification models.
-     *
-     * @param promise JS promise to resolve with result.
-     * @param interpreter TFLite interpreter for the crop.
-     * @param labels List of disease labels.
-     * @param imagePath Path to the image file.
-     */
     private fun runDisease(promise: Promise, interpreter: Interpreter?, labels: List<String>, imagePath: String) {
         try {
             if (interpreter == null || labels.isEmpty()) {
@@ -230,6 +172,170 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
                 return
             }
             promise.resolve(runModel(interpreter, labels, imagePath))
+        } catch (e: Exception) {
+            promise.reject("INFERENCE_ERROR", e.message)
+        }
+    }
+
+    // ---------------- Grad-CAM Support ----------------
+
+    private fun readNpyFromAssets(filename: String): FloatArray {
+        val input = reactApplicationContext.assets.open(filename)
+        val all = input.readBytes()
+        input.close()
+
+        val headerLen = (all[8].toInt() and 0xFF) or ((all[9].toInt() and 0xFF) shl 8)
+        val headerEnd = 10 + headerLen
+        if (!String(all, 10, headerLen, Charsets.ISO_8859_1).contains("f4")) {
+            throw IOException("Unsupported dtype in $filename")
+        }
+        val bytesPer = 4
+        val nElements = (all.size - headerEnd) / bytesPer
+        val result = FloatArray(nElements)
+        var idx = 0; var b = headerEnd
+        while (b + 3 < all.size) {
+            val bits = (all[b].toInt() and 0xFF) or ((all[b+1].toInt() and 0xFF) shl 8) or
+                       ((all[b+2].toInt() and 0xFF) shl 16) or ((all[b+3].toInt() and 0xFF) shl 24)
+            result[idx++] = Float.fromBits(bits)
+            b += 4
+        }
+        return result
+    }
+
+    private fun createOutputArrayForShape(shape: IntArray): Any {
+        return java.lang.reflect.Array.newInstance(Float::class.javaPrimitiveType, *shape)
+    }
+
+    private fun flattenFeatureMapsChannelLast(nested: Any, shape: IntArray): FloatArray {
+        val batch = java.lang.reflect.Array.get(nested, 0)
+        val H = shape[1]; val W = shape[2]; val C = shape[3]
+        val out = FloatArray(H * W * C)
+        var idx = 0
+        for (y in 0 until H) {
+            val row = java.lang.reflect.Array.get(batch, y)
+            for (x in 0 until W) {
+                val cell = java.lang.reflect.Array.get(row, x) as FloatArray
+                for (c in 0 until C) out[idx++] = cell[c]
+            }
+        }
+        return out
+    }
+
+    private fun computeHeatmapFromFeatureMaps(
+        featureMaps: FloatArray, H: Int, W: Int, C: Int, classIndex: Int, numClasses: Int, classifierWeights: FloatArray
+    ): FloatArray {
+        val heat = FloatArray(H * W)
+        var maxV = 1e-8f
+        for (y in 0 until H) {
+            for (x in 0 until W) {
+                var s = 0f
+                val base = (y * W + x) * C
+                for (c in 0 until C) {
+                    s += featureMaps[base + c] * classifierWeights[c * numClasses + classIndex]
+                }
+                val idx = y * W + x
+                val relu = if (s > 0f) s else 0f
+                heat[idx] = relu
+                if (relu > maxV) maxV = relu
+            }
+        }
+        if (maxV > 0f) for (i in heat.indices) heat[i] /= maxV
+        return heat
+    }
+
+    private fun overlayHeatmapOnBitmap(bitmap: Bitmap, heatmap: FloatArray, H: Int, W: Int, alpha: Float = 0.45f): Bitmap {
+        val bmHeat = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
+        for (y in 0 until H) {
+            for (x in 0 until W) {
+                val v = (heatmap[y * W + x] * 255).toInt().coerceIn(0, 255)
+                val color = (0x80 shl 24) or (v shl 16)
+                bmHeat.setPixel(x, y, color)
+            }
+        }
+        val bmHeatScaled = Bitmap.createScaledBitmap(bmHeat, bitmap.width, bitmap.height, true)
+        val combined = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(combined); val paint = Paint()
+        canvas.drawBitmap(bitmap, 0f, 0f, null)
+        paint.alpha = (255 * alpha).toInt()
+        canvas.drawBitmap(bmHeatScaled, 0f, 0f, paint)
+        return combined
+    }
+
+    private fun bitmapToBase64Png(bmp: Bitmap): String {
+        val baos = ByteArrayOutputStream()
+        bmp.compress(Bitmap.CompressFormat.PNG, 90, baos)
+        return Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+    }
+
+    private fun runModelWithGradCam(
+        interpreter: Interpreter,
+        labels: List<String>,
+        imagePath: String,
+        weightsAssetName: String,
+        biasAssetName: String? = null
+    ): WritableMap {
+        val inputBuffer = preprocessImage(imagePath)
+
+        val outputCount = interpreter.outputTensorCount
+        val outShapes = (0 until outputCount).map { interpreter.getOutputTensor(it).shape() }
+
+        val outputsMap = HashMap<Int, Any>()
+        for (i in 0 until outputCount) {
+            outputsMap[i] = createOutputArrayForShape(outShapes[i])
+        }
+        interpreter.runForMultipleInputsOutputs(arrayOf<Any>(inputBuffer), outputsMap)
+
+        var fmapIndex = -1; var logitsIndex = -1
+        var fmapShape: IntArray? = null; var logitsShape: IntArray? = null
+        for ((i, s) in outShapes.withIndex()) {
+            if (s.size == 4) { fmapIndex = i; fmapShape = s }
+            else if (s.size == 2) { logitsIndex = i; logitsShape = s }
+        }
+        if (fmapIndex < 0 || logitsIndex < 0) throw RuntimeException("Could not find outputs")
+
+        val logitsObj = outputsMap[logitsIndex] ?: throw RuntimeException("Logits missing")
+        val logitsAny = java.lang.reflect.Array.get(logitsObj, 0)
+        val logits: FloatArray = logitsAny as? FloatArray
+            ?: throw RuntimeException("Unexpected logits type: ${logitsAny?.javaClass}")
+
+        // softmax
+        val maxLog = logits.maxOrNull() ?: 0f
+        val exps = FloatArray(logits.size); var sum = 0.0
+        for (i in logits.indices) { exps[i] = Math.exp((logits[i] - maxLog).toDouble()).toFloat(); sum += exps[i] }
+        val probs = FloatArray(logits.size)
+        for (i in probs.indices) probs[i] = (exps[i] / sum).toFloat()
+        val predIdx = probs.indices.maxByOrNull { probs[it] } ?: -1
+        val predLabel = if (predIdx >= 0 && predIdx < labels.size) labels[predIdx] else "Unknown"
+        val confidence = if (predIdx >= 0) probs[predIdx] else 0f
+
+        val fmapObj = outputsMap[fmapIndex] ?: throw RuntimeException("Feature maps missing")
+        val fmapFlat = flattenFeatureMapsChannelLast(fmapObj, fmapShape!!)
+
+        val classifierWeights = readNpyFromAssets(weightsAssetName)
+        val numClasses = logits.size
+        val heatmap = computeHeatmapFromFeatureMaps(fmapFlat, fmapShape!![1], fmapShape!![2], fmapShape!![3], predIdx, numClasses, classifierWeights)
+
+        val origBmp = BitmapFactory.decodeFile(imagePath) ?: throw IllegalArgumentException("Failed to decode image")
+        val resizedOrig = Bitmap.createScaledBitmap(origBmp, inputSize, inputSize, true)
+        val overlay = overlayHeatmapOnBitmap(resizedOrig, heatmap, fmapShape!![1], fmapShape!![2], 0.45f)
+
+        return Arguments.createMap().apply {
+            putString("label", predLabel)
+            putDouble("confidence", confidence.toDouble())
+            putString("heatmap_base64", bitmapToBase64Png(overlay))
+        }
+    }
+
+    @ReactMethod
+    fun runAppleDiseaseModelWithGradCAM(imagePath: String, promise: Promise) {
+        try {
+            val modelBuffer = loadModelFile("apple_two_output_MobileNetV3Large.tflite")
+            val dualInterp = Interpreter(modelBuffer)
+            if (appleDiseaseLabels.isEmpty()) {
+                promise.reject("MODEL_ERROR", "Apple disease labels not loaded"); return
+            }
+            val outMap = runModelWithGradCam(dualInterp, appleDiseaseLabels, imagePath, "apple_classifier_weights.npy", "apple_classifier_bias.npy")
+            promise.resolve(outMap)
         } catch (e: Exception) {
             promise.reject("INFERENCE_ERROR", e.message)
         }
