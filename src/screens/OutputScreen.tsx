@@ -45,24 +45,31 @@ export default function OutputScreen() {
         let diseaseResult;
 
         switch (selectedCrop.toLowerCase()) {
+          // diseaseResult = await MyTFLiteModule.runCornDiseaseModel(photo.path);
+          // uses Grad-CAM dual-output model so we also receive heatmap_base64
+
           case 'apple':
-            // uses Grad-CAM dual-output model so we also receive heatmap_base64
-            diseaseResult =
-              await MyTFLiteModule.runAppleDiseaseModelWithGradCAM(photo.path);
+            diseaseResult = await MyTFLiteModule.runAppleDiseaseDualModel(
+              photo.path,
+            );
             break;
           case 'corn':
-            diseaseResult = await MyTFLiteModule.runCornDiseaseModel(photo.path);
+            diseaseResult = await MyTFLiteModule.runCornDiseaseDualModel(
+              photo.path,
+            );
             break;
           case 'grape':
-            diseaseResult = await MyTFLiteModule.runGrapeDiseaseModel(photo.path);
+            diseaseResult = await MyTFLiteModule.runGrapeDiseaseDualModel(
+              photo.path,
+            );
             break;
           case 'potato':
-            diseaseResult = await MyTFLiteModule.runPotatoDiseaseModel(
+            diseaseResult = await MyTFLiteModule.runPotatoDiseaseDualModel(
               photo.path,
             );
             break;
           case 'tomato':
-            diseaseResult = await MyTFLiteModule.runTomatoDiseaseModel(
+            diseaseResult = await MyTFLiteModule.runTomatoDiseaseDualModel(
               photo.path,
             );
             break;
@@ -109,9 +116,10 @@ export default function OutputScreen() {
         <>
           <Image
             source={{
-              uri: showGradcam && gradcamBase64
-                ? `data:image/png;base64,${gradcamBase64}`
-                : `file://${photo.path}`,
+              uri:
+                showGradcam && gradcamBase64
+                  ? `data:image/png;base64,${gradcamBase64}`
+                  : `file://${photo.path}`,
             }}
             style={styles.preview}
             resizeMode="cover"
