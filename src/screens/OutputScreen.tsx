@@ -74,14 +74,14 @@ export default function OutputScreen() {
             );
             break;
           default:
-            setPrediction(`❌ No disease model available for ${selectedCrop}`);
+            setPrediction(`No disease model available for ${selectedCrop}`);
             setConfidence(null);
             setLoading(false);
             return;
         }
 
         if (diseaseResult) {
-          console.log('📊 Full inference result:', diseaseResult);
+          console.log('Full inference result:', diseaseResult);
           setPrediction(diseaseResult.label);
           setConfidence(diseaseResult.confidence * 100);
           if (diseaseResult.heatmap_base64) {

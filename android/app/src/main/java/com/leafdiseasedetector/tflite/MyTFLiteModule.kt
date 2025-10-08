@@ -17,19 +17,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.util.Base64
 import java.io.ByteArrayOutputStream
-import java.util.Locale
 
-/**
- * React Native bridge module for running TensorFlow Lite models.
- *
- * Responsibilities:
- * - Load the crop classifier model (to identify crop type).
- * - Load multiple crop-specific disease detection models (single-output).
- * - Load multiple crop-specific dual-output disease models (feature-maps + logits) for Grad-CAM.
- * - Provide ReactMethods to run classification and inference from the JS/TS side.
- *
- * Supported crops: Apple, Corn, Grape, Potato, Tomato.
- */
 class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
 
     // ==== Interpreters for single-output models ====
@@ -55,18 +43,12 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
     private var potatoDiseaseLabels: List<String> = emptyList()
     private var tomatoDiseaseLabels: List<String> = emptyList()
 
-    // ==== Weights and Bias filenames (nullable) ====
+    // ==== Weights filenames (nullable) ====
     private var appleClassifierWeights: String? = null
     private var cornClassifierWeights: String? = null
     private var grapeClassifierWeights: String? = null
     private var tomatoClassifierWeights: String? = null
     private var potatoClassifierWeights: String? = null
-
-    private var appleClassifierBias: String? = null
-    private var cornClassifierBias: String? = null
-    private var grapeClassifierBias: String? = null
-    private var tomatoClassifierBias: String? = null
-    private var potatoClassifierBias: String? = null
 
     // ==== Model input settings ====
     private val inputSize = 224
@@ -81,76 +63,73 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
             leafClassifierLabels = loadLabels("leaf_type_labels.txt")
             leafClassifierTflite = Interpreter(loadModelFile("leaf_type_classifier_MobileNetV3Large.tflite"))
 
-            // Load crop-specific disease models (single-output)
+            // Apple
             appleDiseaseLabels = loadLabels("apple_disease_labels.txt")
             appleDiseaseTflite = Interpreter(loadModelFile("apple_disease_model_MobileNetV3Large.tflite"))
-            // Load dual-output for gradcam (if present)
             try {
                 appleDiseaseDualTflite = Interpreter(loadModelFile("apple_two_output_MobileNetV3Large_TrainTestVal.tflite"))
                 appleClassifierWeights = "apple_classifier_weights.npy"
-                appleClassifierBias = "apple_classifier_bias.npy"
             } catch (e: Exception) {
                 Log.w("MyTFLiteModule", "apple dual model or weights not found: ${e.message}")
                 appleDiseaseDualTflite = null
                 appleClassifierWeights = null
-                appleClassifierBias = null
             }
 
+            // Corn
             cornDiseaseLabels = loadLabels("corn_disease_labels.txt")
             cornDiseaseTflite = Interpreter(loadModelFile("corn_disease_model_MobileNetV3Large.tflite"))
             try {
                 cornDiseaseDualTflite = Interpreter(loadModelFile("corn_two_output_MobileNetV3Large_TrainTestVal.tflite"))
                 cornClassifierWeights = "corn_classifier_weights.npy"
-                cornClassifierBias = "corn_classifier_bias.npy"
             } catch (e: Exception) {
                 Log.w("MyTFLiteModule", "corn dual model or weights not found: ${e.message}")
                 cornDiseaseDualTflite = null
             }
 
+            // Grape
             grapeDiseaseLabels = loadLabels("grape_disease_labels.txt")
             grapeDiseaseTflite = Interpreter(loadModelFile("grape_disease_model_MobileNetV3Large.tflite"))
             try {
-                grapeDiseaseDualTflite = Interpreter(loadModelFile("apple_two_output_MobileNetV3Large_TrainTestVal.tflite"))
+                grapeDiseaseDualTflite = Interpreter(loadModelFile("grape_two_output_MobileNetV3Large_TrainTestVal.tflite"))
                 grapeClassifierWeights = "grape_classifier_weights.npy"
-                grapeClassifierBias = "grape_classifier_bias.npy"
             } catch (e: Exception) {
                 Log.w("MyTFLiteModule", "grape dual model or weights not found: ${e.message}")
                 grapeDiseaseDualTflite = null
             }
 
+            // Potato
             potatoDiseaseLabels = loadLabels("potato_disease_labels.txt")
             potatoDiseaseTflite = Interpreter(loadModelFile("potato_disease_model_MobileNetV3Large.tflite"))
             try {
                 potatoDiseaseDualTflite = Interpreter(loadModelFile("potato_two_output_MobileNetV3Large_TrainTestVal.tflite"))
                 potatoClassifierWeights = "potato_classifier_weights.npy"
-                potatoClassifierBias = "potato_classifier_bias.npy"
             } catch (e: Exception) {
                 Log.w("MyTFLiteModule", "potato dual model or weights not found: ${e.message}")
                 potatoDiseaseDualTflite = null
             }
 
+            // Tomato
             tomatoDiseaseLabels = loadLabels("tomato_disease_labels.txt")
             tomatoDiseaseTflite = Interpreter(loadModelFile("tomato_disease_model_MobileNetV3Large.tflite"))
             try {
                 tomatoDiseaseDualTflite = Interpreter(loadModelFile("tomato_two_output_MobileNetV3Large_TrainTestVal.tflite"))
                 tomatoClassifierWeights = "tomato_classifier_weights.npy"
-                tomatoClassifierBias = "tomato_classifier_bias.npy"
             } catch (e: Exception) {
                 Log.w("MyTFLiteModule", "tomato dual model or weights not found: ${e.message}")
                 tomatoDiseaseDualTflite = null
             }
 
-            Log.i("MyTFLiteModule", "✅ All single-output models loaded; attempted to load dual-output models.")
+            Log.i("MyTFLiteModule", "✅ Models loaded (single-output loaded; attempted dual-output).")
         } catch (e: Exception) {
             Log.e("MyTFLiteModule", "❌ Error loading TFLite models or labels: ${e.message}", e)
         }
     }
 
     private fun loadModelFile(filename: String): MappedByteBuffer {
-        val fileDescriptor = reactApplicationContext.assets.openFd(filename)
-        val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
+        val afd = reactApplicationContext.assets.openFd(filename)
+        val inputStream = FileInputStream(afd.fileDescriptor)
         val fileChannel = inputStream.channel
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, fileDescriptor.startOffset, fileDescriptor.declaredLength)
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY, afd.startOffset, afd.declaredLength)
     }
 
     @Throws(IOException::class)
@@ -166,9 +145,33 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
     }
 
     private fun preprocessImage(imagePath: String): ByteBuffer {
-        val bitmap =
-            BitmapFactory.decodeFile(imagePath) ?: throw IllegalArgumentException("Failed to decode image: $imagePath")
+        val bitmap = BitmapFactory.decodeFile(imagePath)
+            ?: throw IllegalArgumentException("Failed to decode image: $imagePath")
         val resized = Bitmap.createScaledBitmap(bitmap, inputSize, inputSize, true)
+
+        // Log resized dimensions
+        Log.d("MyTFLiteModule", "preprocessImage: resized = ${resized.width}x${resized.height}")
+
+        // sample a few pixels (R,G,B) to verify the bitmap is valid
+        try {
+            val samplePixels = minOf(5, resized.width * resized.height)
+            val samples = mutableListOf<String>()
+            var c = 0
+            loop@ for (y in 0 until resized.height) {
+                for (x in 0 until resized.width) {
+                    val p = resized.getPixel(x, y)
+                    val r = (p shr 16) and 0xFF
+                    val g = (p shr 8) and 0xFF
+                    val b = p and 0xFF
+                    samples.add("($x,$y)=R:$r,G:$g,B:$b")
+                    c++
+                    if (c >= samplePixels) break@loop
+                }
+            }
+            Log.d("MyTFLiteModule", "preprocessImage: pixel samples: ${samples.joinToString(" | ")}")
+        } catch (e: Exception) {
+            Log.w("MyTFLiteModule", "preprocessImage: sampling failed: ${e.message}")
+        }
 
         val inputBuffer = ByteBuffer.allocateDirect(1 * inputSize * inputSize * pixelSize * numBytesPerChannel)
         inputBuffer.order(ByteOrder.nativeOrder())
@@ -176,24 +179,84 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         for (y in 0 until inputSize) {
             for (x in 0 until inputSize) {
                 val pixel = resized.getPixel(x, y)
+                // model in Python used internal preprocess; here we match Python: pass raw 0..255 floats
                 inputBuffer.putFloat(((pixel shr 16 and 0xFF).toFloat())) // R
                 inputBuffer.putFloat(((pixel shr 8 and 0xFF).toFloat()))  // G
                 inputBuffer.putFloat(((pixel and 0xFF).toFloat()))        // B
             }
         }
+
+        // Reset buffer position so interpreter reads from start
+        inputBuffer.rewind()
+
+        // Log first 10 floats (safe duplicate read)
+        try {
+            val tmp = FloatArray(10)
+            val dup = inputBuffer.duplicate()
+            dup.order(ByteOrder.nativeOrder())
+            dup.rewind()
+            for (i in 0 until tmp.size) {
+                tmp[i] = if (dup.remaining() >= 4) dup.float else 0f
+            }
+            Log.d("MyTFLiteModule", "input sample floats (first ${tmp.size}): ${tmp.joinToString { "%.3f".format(it) }}")
+        } catch (e: Exception) {
+            Log.w("MyTFLiteModule", "Could not log input sample: ${e.message}")
+        } finally {
+            inputBuffer.rewind()
+        }
+
         return inputBuffer
+    }
+
+    // Helper: if outputs are already probabilities (sum~1 and in [0,1]) use them, else apply softmax
+    private fun ensureProbs(outputs: FloatArray): FloatArray {
+        val probs = FloatArray(outputs.size)
+        val sum = outputs.sum()
+        val allBetween01 = outputs.all { it >= 0f && it <= 1f }
+        return if (allBetween01 && kotlin.math.abs(sum - 1.0f) < 1e-3f) {
+            // already probabilities
+            System.arraycopy(outputs, 0, probs, 0, outputs.size)
+            Log.d("MyTFLiteModule", "Interpreting model outputs as probabilities (sum=${"%.6f".format(sum)})")
+            probs
+        } else {
+            // stable softmax
+            val maxLog = outputs.maxOrNull() ?: 0f
+            var s = 0.0
+            val exps = FloatArray(outputs.size)
+            for (i in outputs.indices) {
+                val e = Math.exp((outputs[i] - maxLog).toDouble()).toFloat()
+                exps[i] = e
+                s += e
+            }
+            for (i in outputs.indices) probs[i] = (exps[i] / s).toFloat()
+            Log.d("MyTFLiteModule", "Applied softmax to outputs (sumExp=${"%.6f".format(s)})")
+            probs
+        }
     }
 
     private fun runModel(interpreter: Interpreter?, labels: List<String>, imagePath: String): WritableMap {
         val inputBuffer = preprocessImage(imagePath)
         val outputShape = interpreter!!.getOutputTensor(0).shape()
         val outputBuffer = Array(1) { FloatArray(outputShape[1]) }
+
+        // Ensure buffer position is at start
+        inputBuffer.rewind()
         interpreter.run(inputBuffer, outputBuffer)
 
-        val result = outputBuffer[0]
-        val maxIdx = result.indices.maxByOrNull { result[it] } ?: -1
+        val raw = outputBuffer[0]
+
+        // Log raw outputs
+        Log.d("MyTFLiteModule", "raw outputs: ${raw.joinToString { "%.6f".format(it) }}")
+
+        val probs = ensureProbs(raw)
+        val maxIdx = probs.indices.maxByOrNull { probs[it] } ?: -1
         val predictedLabel = labels.getOrNull(maxIdx) ?: "Unknown"
-        val confidence = if (maxIdx != -1) result[maxIdx] else 0.0f
+        val confidence = if (maxIdx != -1) probs[maxIdx] else 0.0f
+
+        // Log chosen prediction + top-3 for debugging
+        val topK = probs.mapIndexed { idx, p -> idx to p }.sortedByDescending { it.second }.take(3)
+        Log.d("MyTFLiteModule", "Top predictions: ${topK.joinToString { (i, p) -> "${labels.getOrNull(i) ?: i}: ${"%.4f".format(p)}" }}")
+        Log.d("MyTFLiteModule", "Predicted: $predictedLabel (Confidence: $confidence)")
 
         return Arguments.createMap().apply {
             putString("label", predictedLabel)
@@ -247,30 +310,30 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
-    // Dual-model (Grad-CAM) runner wrappers (per crop) that use runDualModelWithGradCam
+    // Dual-model (Grad-CAM) runner wrappers
     @ReactMethod
     fun runAppleDiseaseDualModel(imagePath: String, promise: Promise) = runDualDisease(
-        promise, appleDiseaseDualTflite, appleDiseaseLabels, imagePath, appleClassifierWeights, appleClassifierBias
+        promise, appleDiseaseDualTflite, appleDiseaseLabels, imagePath, appleClassifierWeights
     )
 
     @ReactMethod
     fun runCornDiseaseDualModel(imagePath: String, promise: Promise) = runDualDisease(
-        promise, cornDiseaseDualTflite, cornDiseaseLabels, imagePath, cornClassifierWeights, cornClassifierBias
+        promise, cornDiseaseDualTflite, cornDiseaseLabels, imagePath, cornClassifierWeights
     )
 
     @ReactMethod
     fun runGrapeDiseaseDualModel(imagePath: String, promise: Promise) = runDualDisease(
-        promise, grapeDiseaseDualTflite, grapeDiseaseLabels, imagePath, grapeClassifierWeights, grapeClassifierBias
+        promise, grapeDiseaseDualTflite, grapeDiseaseLabels, imagePath, grapeClassifierWeights
     )
 
     @ReactMethod
     fun runTomatoDiseaseDualModel(imagePath: String, promise: Promise) = runDualDisease(
-        promise, tomatoDiseaseDualTflite, tomatoDiseaseLabels, imagePath, tomatoClassifierWeights, tomatoClassifierBias
+        promise, tomatoDiseaseDualTflite, tomatoDiseaseLabels, imagePath, tomatoClassifierWeights
     )
 
     @ReactMethod
     fun runPotatoDiseaseDualModel(imagePath: String, promise: Promise) = runDualDisease(
-        promise, potatoDiseaseDualTflite, potatoDiseaseLabels, imagePath, potatoClassifierWeights, potatoClassifierBias
+        promise, potatoDiseaseDualTflite, potatoDiseaseLabels, imagePath, potatoClassifierWeights
     )
 
     private fun runDualDisease(
@@ -278,8 +341,7 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         interpreter: Interpreter?,
         labels: List<String>,
         imagePath: String,
-        weights: String?,
-        bias: String?
+        weights: String?
     ) {
         try {
             if (interpreter == null || labels.isEmpty()) {
@@ -290,7 +352,7 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
                 promise.reject("MODEL_ERROR", "Classifier weights npy not provided for this crop.")
                 return
             }
-            promise.resolve(runDualModelWithGradCam(interpreter, labels, imagePath, weights, bias))
+            promise.resolve(runDualModelWithGradCam(interpreter, labels, imagePath, weights))
         } catch (e: Exception) {
             promise.reject("INFERENCE_ERROR", e.message)
         }
@@ -311,7 +373,7 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         val bytesPer = 4
         val nElements = (all.size - headerEnd) / bytesPer
         val result = FloatArray(nElements)
-        var idx = 0;
+        var idx = 0
         var b = headerEnd
         while (b + 3 < all.size) {
             val bits =
@@ -328,8 +390,8 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
 
     private fun flattenFeatureMapsChannelLast(nested: Any, shape: IntArray): FloatArray {
         val batch = java.lang.reflect.Array.get(nested, 0)
-        val H = shape[1];
-        val W = shape[2];
+        val H = shape[1]
+        val W = shape[2]
         val C = shape[3]
         val out = FloatArray(H * W * C)
         var idx = 0
@@ -378,7 +440,7 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         }
         val bmHeatScaled = Bitmap.createScaledBitmap(bmHeat, bitmap.width, bitmap.height, true)
         val combined = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(combined);
+        val canvas = Canvas(combined)
         val paint = Paint()
         canvas.drawBitmap(bitmap, 0f, 0f, null)
         paint.alpha = (255 * alpha).toInt()
@@ -399,20 +461,27 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         weightsAssetName: String,
         biasAssetName: String? = null
     ): WritableMap {
+        Log.d("MyTFLiteModule", "Generating Grad-CAM for $imagePath using $weightsAssetName")
         val inputBuffer = preprocessImage(imagePath)
 
         val outputCount = interpreter.outputTensorCount
+        Log.d("MyTFLiteModule", "Model output tensors: $outputCount")
+
         val outShapes = (0 until outputCount).map { interpreter.getOutputTensor(it).shape() }
+        Log.d("MyTFLiteModule", "Output shapes: ${outShapes.joinToString { it.contentToString() }}")
 
         val outputsMap = HashMap<Int, Any>()
         for (i in 0 until outputCount) {
             outputsMap[i] = createOutputArrayForShape(outShapes[i])
         }
+
+        // Ensure buffer at start
+        inputBuffer.rewind()
         interpreter.runForMultipleInputsOutputs(arrayOf<Any>(inputBuffer), outputsMap)
 
-        var fmapIndex = -1;
+        var fmapIndex = -1
         var logitsIndex = -1
-        var fmapShape: IntArray? = null;
+        var fmapShape: IntArray? = null
         var logitsShape: IntArray? = null
         for ((i, s) in outShapes.withIndex()) {
             if (s.size == 4) {
@@ -421,25 +490,24 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
                 logitsIndex = i; logitsShape = s
             }
         }
+        Log.d("MyTFLiteModule", "FeatureMap Index: $fmapIndex, Logits Index: $logitsIndex")
         if (fmapIndex < 0 || logitsIndex < 0) throw RuntimeException("Could not find outputs")
 
         val logitsObj = outputsMap[logitsIndex] ?: throw RuntimeException("Logits missing")
         val logitsAny = java.lang.reflect.Array.get(logitsObj, 0)
-        val logits: FloatArray =
-            logitsAny as? FloatArray ?: throw RuntimeException("Unexpected logits type: ${logitsAny?.javaClass}")
+        val logits: FloatArray = logitsAny as? FloatArray ?: throw RuntimeException("Unexpected logits type: ${logitsAny?.javaClass}")
 
-        // softmax
-        val maxLog = logits.maxOrNull() ?: 0f
-        val exps = FloatArray(logits.size);
-        var sum = 0.0
-        for (i in logits.indices) {
-            exps[i] = Math.exp((logits[i] - maxLog).toDouble()).toFloat(); sum += exps[i]
-        }
-        val probs = FloatArray(logits.size)
-        for (i in probs.indices) probs[i] = (exps[i] / sum).toFloat()
+        Log.d("MyTFLiteModule", "raw outputs: ${logits.joinToString { "%.6f".format(it) }}")
+
+        val probs = ensureProbs(logits)
         val predIdx = probs.indices.maxByOrNull { probs[it] } ?: -1
         val predLabel = if (predIdx >= 0 && predIdx < labels.size) labels[predIdx] else "Unknown"
         val confidence = if (predIdx >= 0) probs[predIdx] else 0f
+
+        // Top-K for debugging
+        val topK = probs.mapIndexed { idx, p -> idx to p }.sortedByDescending { it.second }.take(5)
+        Log.d("MyTFLiteModule", "Top predictions: ${topK.joinToString { (i, p) -> "${labels.getOrNull(i) ?: i}: ${"%.4f".format(p)}" }}")
+        Log.d("MyTFLiteModule", "Predicted: $predLabel (Confidence: $confidence)")
 
         val fmapObj = outputsMap[fmapIndex] ?: throw RuntimeException("Feature maps missing")
         val fmapFlat = flattenFeatureMapsChannelLast(fmapObj, fmapShape!!)
@@ -453,6 +521,7 @@ class MyTFLiteModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
         val origBmp = BitmapFactory.decodeFile(imagePath) ?: throw IllegalArgumentException("Failed to decode image")
         val resizedOrig = Bitmap.createScaledBitmap(origBmp, inputSize, inputSize, true)
         val overlay = overlayHeatmapOnBitmap(resizedOrig, heatmap, fmapShape!![1], fmapShape!![2], 0.45f)
+        Log.d("MyTFLiteModule", "✅ Heatmap overlay generated successfully.")
 
         return Arguments.createMap().apply {
             putString("label", predLabel)

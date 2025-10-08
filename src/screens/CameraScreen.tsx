@@ -1,4 +1,3 @@
-// CameraScreen.tsx
 import React, { useRef, useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
 import {

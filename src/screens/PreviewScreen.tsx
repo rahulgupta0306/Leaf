@@ -13,7 +13,6 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-// Import your custom native module
 const { MyTFLiteModule } = NativeModules;
 
 type PreviewScreenNavigationProp = NativeStackNavigationProp<
@@ -55,10 +54,10 @@ export default function PreviewScreen() {
 
       // const predictedCrop = selectedCrop;
 
-      // ✅ If crop matches, go to Output screen
+      // If crop matches, go to Output screen
       navigation.navigate('Output', {
         photo: { path: photo.path },
-        selectedCrop: predictedCrop, // safer to use predictedCrop here
+        selectedCrop: predictedCrop, 
       });
     } catch (e) {
       console.error('Crop classifier failed:', e);
